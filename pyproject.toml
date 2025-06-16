@@ -1,5 +1,5 @@
 [project]
-name = "re-port"
+name = "portune"
 authors = [
     { name = "Franck Jouvanceau" },
 ]
@@ -36,16 +36,17 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/joknarf/re-port"
-Documentation = "https://github.com/joknarf/re-port/blob/main/README.md"
-Repository = "https://github.com/joknarf/re-port.git"
+Homepage = "https://github.com/joknarf/portune"
+Documentation = "https://github.com/joknarf/portune/blob/main/README.md"
+Repository = "https://github.com/joknarf/portune.git"
 
 [build-system]
 requires = ["setuptools >= 61.0", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-version_file = "re_port/version.py"
+version_file = "porttune/version.py"
 
 [project.scripts]
-re-port = "re_port.re_port:main"
+portune = "portune.portune:main"
+re-port = "portune.portune:main"
