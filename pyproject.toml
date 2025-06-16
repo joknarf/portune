@@ -48,4 +48,4 @@ build-backend = "setuptools.build_meta"
 version_file = "re-port/version.py"
 
 [project.scripts]
-re-port = "re-port.re-port:main"
+re-port = "re_port.re_port:main"
