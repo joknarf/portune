@@ -78,7 +78,16 @@ div {
     text-align: right;
     padding-right: 8px;
 }
-
+.desc {
+    text-overflow: ellipsis;
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.desc:hover {
+    overflow: visible;
+    white-space: normal;
+}
 .table-container { 
     height: 90%;
     overflow-y: auto;
@@ -1224,7 +1233,7 @@ def generate_html_report(
                     <td style="text-align: right;">{port}</td>
                     <td style="text-align: center;"><span class="{status_class} status">{escape(status)}</span></td>
                     <td style="text-align: center;"><span class="{ping_class} ping">{ping_status}</span></td>
-                    <td>{escape(str(desc))}</td>
+                    <td class="desc">{escape(str(desc))}</td>
                 </tr>
             ''')
 
