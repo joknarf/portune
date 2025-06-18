@@ -906,6 +906,29 @@ def format_percent(value: int, total: int) -> Tuple[str, str]:
         return "0/0", "0.0%"
     return f"{value}/{total}", f"{(value/total*100):.1f}%"
 
+def get_vlan_base(ip: str, bits: int) -> str:
+    """Calculate VLAN base address with end padding 0."""
+    if ip == 'N/A':
+        return 'N/A'
+    try:
+        octets = ip.split('.')
+        if len(octets) != 4:
+            return 'invalid'
+
+        # Convert IP to 32-bit integer
+        ip_int = sum(int(octet) << (24 - 8 * i) for i, octet in enumerate(octets))
+
+        # Apply mask
+        mask = ((1 << bits) - 1) << (32 - bits)
+        masked_ip = ip_int & mask
+
+        # Convert back to dotted notation
+        result_octets = [(masked_ip >> (24 - 8 * i)) & 255 for i in range(4)]
+        return '.'.join(map(str, result_octets))
+    except:
+        return 'N/A'
+
+
 def compute_stats(
     results: List[Tuple[str, str, int, str, bool]],
     start_time: float,
@@ -954,25 +977,6 @@ def compute_stats(
     }
 
 
-    def get_vlan_base(ip: str, bits: int) -> str:
-        """Calculate VLAN base address with end padding 0."""
-        try:
-            octets = ip.split('.')
-            if len(octets) != 4:
-                return 'invalid'
-
-            # Convert IP to 32-bit integer
-            ip_int = sum(int(octet) << (24 - 8 * i) for i, octet in enumerate(octets))
-
-            # Apply mask
-            mask = ((1 << bits) - 1) << (32 - bits)
-            masked_ip = ip_int & mask
-
-            # Convert back to dotted notation
-            result_octets = [(masked_ip >> (24 - 8 * i)) & 255 for i in range(4)]
-            return '.'.join(map(str, result_octets))
-        except:
-            return 'invalid'
 
     # Collect VLAN statistics for timeouts
     for hostname, ip, port, status, _ in results:
@@ -1179,13 +1183,14 @@ def generate_html_report(
         f.write(f'<h3 class="icon">Port Accessibility Report from {HOSTNAME} ({MY_IP}) to {os.path.basename(input_file)} - {time.strftime("%Y-%m-%d %H:%M:%S", scan_time)}</h3>\n')
         
         # Write detailed results table
-        f.write('''
+        f.write(f'''
         <div class="table-container" id="result-container">
             <table id="commandTable">
                 <thead>
                     <tr>
                         <th>Hostname</th>
                         <th>IP</th>
+                        <th>VLAN/{stats['vlan_bits']}</th>
                         <th>Port</th>
                         <th>Status</th>
                         <th>Ping</th>
@@ -1203,6 +1208,7 @@ def generate_html_report(
                 <tr>
                     <td>{escape(str(hostname))}</td>
                     <td>{escape(str(ip))}</td>
+                    <td>{str(get_vlan_base(ip, stats['vlan_bits']))}</td>
                     <td style="text-align: right;">{port}</td>
                     <td style="text-align: center;"><span class="{status_class} status">{escape(status)}</span></td>
                     <td style="text-align: center;"><span class="{ping_class} ping">{ping_status}</span></td>
