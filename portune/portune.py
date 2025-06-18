@@ -600,6 +600,7 @@ def parse_input_file(filename: str) -> List[Tuple[str, List[int]]]:
         A list of tuples, each containing:
             - hostname (str): The target hostname or IP address
             - ports (List[int]): List of ports to scan for that host
+            - desc (str): Optional description for the host
 
     Examples:
         Input file format:
@@ -615,19 +616,26 @@ def parse_input_file(filename: str) -> List[Tuple[str, List[int]]]:
                 ('host3', [8080])
             ]
     """
-    hosts = []
+    host_dict = {}
     with open(filename, 'r') as f:
         for line in f:
             line = line.strip().lower()
             if not line or line.startswith('#'):
                 continue
-            try:
-                host, ports = line.split()
-                port_list = [int(p) for p in ports.split(',')]
-                hosts.append((host, port_list))
-            except Exception:
-                hosts.append((line, [22]))  # Default port 22 if parsing fails
-                continue
+            words = line.split()
+            fqdn = words[0]
+            ports = words[1] if len(words) > 1 else '22'
+            port_list = [int(p) for p in ports.split(',')]
+            desc = ' '.join(words[2:]).strip() if len(words) > 2 else ''
+            if fqdn in host_dict:
+                existing_ports, existing_desc = host_dict[fqdn]
+                host_dict[fqdn] = (list(set(existing_ports + port_list)), existing_desc or desc)
+            else:
+                host_dict[fqdn] = (port_list, desc)            
+    hosts = []
+    for fqdn in  host_dict:
+        ports, desc = host_dict[fqdn]
+        hosts.append((fqdn, sorted(ports), desc))
     return hosts
 
 def ping_host(ip: str, timeout: float = 2.0) -> bool:
@@ -698,7 +706,7 @@ def resolve_and_ping_host(hostname: str, timeout: float = 2.0, noping: bool = Fa
     except Exception:
         return hostname, {'ip': 'N/A', 'ping': False}
 
-def ping_hosts(hosts: List[Tuple[str, List[int]]], 
+def ping_hosts(hosts: List[Tuple[str, List[int], str]], 
              timeout: float = 2.0, 
              parallelism: int = 10, 
              noping: bool = False) -> Dict[str, Dict[str, Union[str, bool]]]:
@@ -739,7 +747,7 @@ def ping_hosts(hosts: List[Tuple[str, List[int]]],
     with ThreadPoolExecutor(max_workers=parallelism) as executor:
         future_to_host = {
             executor.submit(resolve_and_ping_host, hostname, timeout, noping): hostname
-            for hostname, _ in hosts
+            for hostname, _, _ in hosts
         }
         
         # Add callback to update progress bar when each future completes
@@ -760,7 +768,8 @@ def ping_hosts(hosts: List[Tuple[str, List[int]]],
 
 def check_port(hostname: str, 
              port: int, 
-             host_info: Dict[str, Union[str, bool]], 
+             host_info: Dict[str, Union[str, bool]],
+             desc: str,
              timeout: float = 2.0) -> Tuple[str, str, int, str, bool]:
     """Check if a specific TCP port is accessible on a host.
 
@@ -774,6 +783,7 @@ def check_port(hostname: str,
             - 'ip': IP address or 'N/A' if resolution failed
             - 'ping': Boolean indicating ping status
             - 'hostname': Optional resolved hostname from reverse DNS
+        desc: Optional description for the host
         timeout: Maximum time to wait for connection in seconds
 
     Returns:
@@ -783,6 +793,7 @@ def check_port(hostname: str,
             - port: The port number that was checked
             - status: Connection status (CONNECTED/TIMEOUT/REFUSED/UNREACHABLE)
             - ping: Boolean indicating if the host responded to ping
+            - desc: Optional description for the host
         
     Status meanings:
         CONNECTED: Successfully established TCP connection
@@ -792,7 +803,7 @@ def check_port(hostname: str,
         RESOLVE_FAIL: Could not resolve hostname to IP
     """
     if host_info['ip'] == 'N/A':
-        return (hostname, host_info['ip'], port, 'RESOLVE_FAIL', host_info['ping'])
+        return (hostname, host_info['ip'], port, 'RESOLVE_FAIL', host_info['ping'], desc)
     
     # Use resolved hostname if available
     display_hostname = host_info.get('hostname', hostname)
@@ -802,16 +813,16 @@ def check_port(hostname: str,
     try:
         s.connect((host_info['ip'], port))
         s.close()
-        return (display_hostname, host_info['ip'], port, 'CONNECTED', host_info['ping'])
+        return (display_hostname, host_info['ip'], port, 'CONNECTED', host_info['ping'], desc)
     except ConnectionAbortedError:
-        return (display_hostname, host_info['ip'], port, 'CONNECTED', host_info['ping'])
+        return (display_hostname, host_info['ip'], port, 'CONNECTED', host_info['ping'], desc)
     except (TimeoutError, socket.timeout):
-        return (display_hostname, host_info['ip'], port, 'TIMEOUT', host_info['ping'])
+        return (display_hostname, host_info['ip'], port, 'TIMEOUT', host_info['ping'], desc)
     except ConnectionRefusedError:
-        return (display_hostname, host_info['ip'], port, 'REFUSED', host_info['ping'])
+        return (display_hostname, host_info['ip'], port, 'REFUSED', host_info['ping'], desc)
     except Exception:
         # Handle other network errors (filtered, network unreachable, etc)
-        return (display_hostname, host_info['ip'], port, 'UNREACHABLE', host_info['ping'])
+        return (display_hostname, host_info['ip'], port, 'UNREACHABLE', host_info['ping'], desc)
 
 def send_email_report(
     output_file: str,
@@ -979,7 +990,7 @@ def compute_stats(
 
 
     # Collect VLAN statistics for timeouts
-    for hostname, ip, port, status, _ in results:
+    for hostname, ip, port, status, _, _ in results:
         if ip != 'N/A':
             try:
                 vlan = get_vlan_base(ip, bits)
@@ -993,7 +1004,7 @@ def compute_stats(
     # Group results by hostname for host statistics
     host_stats = defaultdict(lambda: {'statuses': [], 'ping': False})
     for result in results:
-        hostname, _, _, status, ping = result
+        hostname, _, _, status, ping, _ = result
         host_stats[hostname]['statuses'].append(status)
         host_stats[hostname]['ping'] |= ping
 
@@ -1020,7 +1031,7 @@ def compute_stats(
         })
     })
     
-    for hostname, ip, port, status, _ in results:
+    for hostname, ip, port, status, _, _ in results:
         # For IP addresses, use VLAN/16 as domain
         try:
             socket.inet_aton(hostname)
@@ -1194,13 +1205,14 @@ def generate_html_report(
                         <th>Port</th>
                         <th>Status</th>
                         <th>Ping</th>
+                        <th>Description</th>
                     </tr>
                 </thead>
                 <tbody>
         ''')
 
         # Add result rows
-        for hostname, ip, port, status, ping in results:
+        for hostname, ip, port, status, ping, desc in results:
             ping_status = 'UP' if ping else 'N/A' if noping else 'DOWN'
             ping_class = 'green' if ping else 'blue' if noping else 'red'
             status_class = 'green' if status == 'CONNECTED' else 'blue' if status == 'REFUSED' else 'red'
@@ -1212,6 +1224,7 @@ def generate_html_report(
                     <td style="text-align: right;">{port}</td>
                     <td style="text-align: center;"><span class="{status_class} status">{escape(status)}</span></td>
                     <td style="text-align: center;"><span class="{ping_class} ping">{ping_status}</span></td>
+                    <td>{escape(str(desc))}</td>
                 </tr>
             ''')
 
@@ -1374,7 +1387,7 @@ def format_table_output(
     table.append(separator)
     
     # Add data rows
-    for hostname, ip, port, status, ping in results:
+    for hostname, ip, port, status, ping, desc in results:
         ping_status = 'UP' if ping else 'N/A' if noping else 'DOWN'
         table.append(row_format.format(
             str(hostname), widths['Hostname'],
@@ -1420,14 +1433,14 @@ def main():
     host_info = ping_hosts(hosts, args.timeout, args.parallelism, args.noping)
     
     # Calculate total tasks and initialize progress bar
-    total_tasks = sum(len(ports) for _, ports in hosts)
+    total_tasks = sum(len(ports) for _, ports, _ in hosts)
     print(f"Preparing to scan {len(hosts)} hosts with {total_tasks} total ports...", file=sys.stderr)
     
     # Prepare tasks with pre-resolved data
     tasks = []
-    for hostname, ports in hosts:
+    for hostname, ports, desc in hosts:
         for port in ports:
-            tasks.append((hostname, port, host_info[hostname]))
+            tasks.append((hostname, port, host_info[hostname], desc))
 
     results = []
     lock = threading.Lock()
@@ -1436,8 +1449,8 @@ def main():
     progress_bar = ProgressBar(total_tasks, prefix='Scanning')
     
     with ThreadPoolExecutor(max_workers=args.parallelism) as executor:
-        future_to_task = {executor.submit(check_port, hostname, port, info, args.timeout): (hostname, port, info) 
-                         for hostname, port, info in tasks}
+        future_to_task = {executor.submit(check_port, hostname, port, info, desc, args.timeout): (hostname, port, info) 
+                         for hostname, port, info, desc in tasks}
         
         for future in as_completed(future_to_task):
             res = future.result()
