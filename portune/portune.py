@@ -38,7 +38,9 @@ body {
     font-family: Arial, sans-serif;
     overflow: auto;
 }
-
+.hidden {
+    display: none;
+}
 .icon {
     border-radius: 25px;
     background-color: #444;
@@ -308,6 +310,7 @@ function toggleSort(table, colIndex, sortBtn) {
 }
 
 function applyFilters(table) {
+    table.classList.add('hidden');
     const rows = Array.from(table.querySelectorAll('tbody tr'));
     const filters = Array.from(table.querySelectorAll('.column-filter'))
         .map(filter => ({
@@ -322,10 +325,10 @@ function applyFilters(table) {
     // First apply filters
     const filteredRows = rows.filter(row => {
         // If no filters are active, show all rows
-        if (filters.every(f => !f.value)) {
-            row.style.display = '';
-            return true;
-        }
+        //if (filters.every(f => !f.value)) {
+        //    row.classList.remove('hidden');
+        //    return true;
+        //}
         const cells = row.cells;
         const shouldShow = !filters.some(filter => {
             if (!filter.value) return false;
@@ -333,7 +336,11 @@ function applyFilters(table) {
             if (filter.regexp) return !filter.regexp.test(cellText);
             return !cellText.toLowerCase().includes(filter.value);
         });
-        row.style.display = shouldShow ? '' : 'none';
+        if (shouldShow) {
+            row.classList.remove('hidden');
+        } else {
+            row.classList.add('hidden');
+        }
         return shouldShow;
     });
 
@@ -371,6 +378,7 @@ function applyFilters(table) {
         const tbody = table.querySelector('tbody');
         filteredRows.forEach(row => tbody.appendChild(row));
     }
+    table.classList.remove('hidden');
 }
 
 function processHtmlContent(element) {
@@ -628,11 +636,11 @@ def parse_input_file(filename: str) -> List[Tuple[str, List[int]]]:
     host_dict = {}
     with open(filename, 'r') as f:
         for line in f:
-            line = line.strip().lower()
+            line = line.strip()
             if not line or line.startswith('#'):
                 continue
             words = line.split()
-            fqdn = words[0]
+            fqdn = words[0].lower()
             ports = words[1] if len(words) > 1 else '22'
             port_list = [int(p) for p in ports.split(',')]
             desc = ' '.join(words[2:]).strip() if len(words) > 2 else ''
@@ -1158,7 +1166,8 @@ def generate_html_report(
     parallelism: int,
     noping: bool,
     stats: Dict[str, Any],
-    input_file: str = ''
+    input_file: str = '',
+    desc_titles: List[str] = [],
 ) -> None:
     """Generate a complete HTML report of the port scan results.
 
@@ -1203,6 +1212,9 @@ def generate_html_report(
         f.write(f'<h3 class="icon">Port Accessibility Report from {HOSTNAME} ({MY_IP}) to {os.path.basename(input_file)} - {time.strftime("%Y-%m-%d %H:%M:%S", scan_time)}</h3>\n')
         
         # Write detailed results table
+        if not desc_titles:
+            _, _, _, _, _, desc = results[0]
+            desc_titles = ["Description" for d in desc.split("|")]
         f.write(f'''
         <div class="table-container" id="result-container">
             <table id="commandTable">
@@ -1214,7 +1226,7 @@ def generate_html_report(
                         <th>Port</th>
                         <th>Status</th>
                         <th>Ping</th>
-                        <th>Description</th>
+                        {"\n".join([f"<th>{d}</th>" for d in desc_titles])}
                     </tr>
                 </thead>
                 <tbody>
@@ -1233,7 +1245,7 @@ def generate_html_report(
                     <td style="text-align: right;">{port}</td>
                     <td style="text-align: center;"><span class="{status_class} status">{escape(status)}</span></td>
                     <td style="text-align: center;"><span class="{ping_class} ping">{ping_status}</span></td>
-                    <td class="desc">{escape(str(desc))}</td>
+                    {"\n".join([f'<td class="desc">{escape(str(d))}</td>' for d in desc.split("|")])}
                 </tr>
             ''')
 
@@ -1417,7 +1429,7 @@ def main():
     parser.add_argument('-n', '--noping', action="store_true", help='No ping check')
     parser.add_argument('-s', '--summary', action="store_true", help='Print scan summary information')
     parser.add_argument('-b', '--bits', type=int, default=16, help='VLAN bits for timeout summary (default: 16)')
-
+    parser.add_argument('-d', '--desc_titles', type=str, nargs='*', help='List of custom description titles for hosts (optional)')
     # Email related arguments
     email_group = parser.add_argument_group('Email Options')
     email_group.add_argument('--email-to', help='Comma-separated list of email recipients')
@@ -1475,7 +1487,17 @@ def main():
     
     # Generate report
     results.sort(key=lambda x: (x[0], x[2]))
-    generate_html_report(results, args.output, time.localtime(start_time), args.timeout, args.parallelism, args.noping, stats, args.input_file)
+    generate_html_report(
+        results,
+        args.output,
+        time.localtime(start_time),
+        args.timeout,
+        args.parallelism,
+        args.noping,
+        stats,
+        args.input_file,
+        args.desc_titles,
+    )
     
     # Print summary
     # Display detailed results in table format
