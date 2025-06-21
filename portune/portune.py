@@ -293,8 +293,9 @@ function initTableFilters(table) {
 
 function updateRowCount(table, count) {
     const rowCount = table.querySelector('.row-count');
+    const totalRows = table.querySelectorAll('tbody tr').length;
     if (rowCount) {
-        rowCount.innerHTML = ` ${count}`; // &#129095;🡇 not working macOS
+        rowCount.innerHTML = ` ${count}/${totalRows}`; // &#129095;🡇 not working macOS
     }
 }
 
