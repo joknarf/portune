@@ -12,7 +12,7 @@ dependencies = [
 ]
 dynamic=["version"]
 readme = "README.md"
-license = "MIT License"
+license = "MIT"
 requires-python = ">= 3.9"
 keywords = ["port", "scanner", "html_report"]
 classifiers = [
