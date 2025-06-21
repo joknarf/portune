@@ -1283,7 +1283,7 @@ def generate_html_report(
                     <td style="text-align: right;">{port}</td>
                     <td style="text-align: center;"><span class="{status_class} status">{escape(status)}</span></td>
                     <td style="text-align: center;"><span class="{ping_class} ping">{ping_status}</span></td>
-                    {"\n".join([f'<td class="desc">{escape(str(d))}</td>' for d in desc])}
+                    {"\n".join([f'<td class="desc">{escape(desc[i] if i < len(desc) else "")}</td>' for i in range(len(desc_titles))])}
                 </tr>
             ''')
 
