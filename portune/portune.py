@@ -30,7 +30,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from typing import List, Dict, Tuple, Any, Optional, Union
-import shlex
 
 # Constants and global variables
 OS = platform.system().lower()
@@ -723,7 +722,7 @@ def ping_host(ip: str, timeout: float = 2.0) -> bool:
         True if host responds to ping, False otherwise
     """
     timeoutms = str(int(timeout * 1000))
-    ping_cmd = shlex.split(PING.format(ip=ip, timeout=timeout, timeoutms=timeoutms))
+    ping_cmd = PING.format(ip=ip, timeout=timeout, timeoutms=timeoutms).split()
     try:
         output = subprocess.run(ping_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout + 1)
         return output.returncode == 0
