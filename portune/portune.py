@@ -30,8 +30,25 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from typing import List, Dict, Tuple, Any, Optional, Union
+import shlex
 
 # Constants and global variables
+OS = platform.system().lower()
+if OS == "windows":
+    PING = "ping -n 1 -w {timeoutms} {ip}"
+elif OS == "darwin":  # macOS
+    PING = "ping -c 1 -t {timeout} {ip}"
+elif OS == "sunos":  # SunOS
+    PING = "ping {ip} {timeout}"
+elif OS == "aix":  # IBM AIX
+    PING = "ping -c 1 -w  {timeout} {ip}"
+elif OS.startswith("hp-ux"):  # HP-UX
+    PING = "ping -n 1 -w {timeout} {ip}"
+else:
+    PING = "ping -c 1 -W {timeout} {ip}"
+
+
+
 ICON = "data:image/svg+xml,%3Csvg height='200px' width='200px' version='1.1' id='Layer_1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' viewBox='0 0 508 508' xml:space='preserve' fill='%23000000'%3E%3Cg id='SVGRepo_bgCarrier' stroke-width='0'%3E%3C/g%3E%3Cg id='SVGRepo_tracerCarrier' stroke-linecap='round' stroke-linejoin='round'%3E%3C/g%3E%3Cg id='SVGRepo_iconCarrier'%3E%3Ccircle style='fill:%23ffbb06;' cx='254' cy='254' r='254'%3E%3C/circle%3E%3Cg%3E%3Ccircle style='fill:%234c4c4c;' cx='399.6' cy='252' r='55.2'%3E%3C/circle%3E%3Ccircle style='fill:%234c4c4c;' cx='150' cy='356' r='55.2'%3E%3C/circle%3E%3Ccircle style='fill:%234c4c4c;' cx='178.4' cy='127.2' r='55.2'%3E%3C/circle%3E%3C/g%3E%3Cpath style='fill:%23000000;' d='M301.2,282.4l15.6,1.2l6.4-19.2l-13.2-8c0.4-5.6,0-11.2-1.2-16.4l12-10l-9.2-18l-15.2,3.6 c-3.6-4-7.6-8-12.4-10.8l1.2-15.6l-19.2-6.4l-8,13.2c-5.6-0.4-11.2,0-16.4,1.2l-10-12l-18,8.8l3.6,15.2c-4,3.6-8,7.6-10.8,12.4 l-15.6-1.2l-6.4,19.2l13.2,8.4c-0.4,5.6,0,11.2,1.2,16.4l-12,10l9.2,18l15.2-3.6c3.6,4,7.6,8,12.4,10.8l-1.6,15.2l19.2,6.4l8.4-13.2 c5.6,0.4,11.2,0,16.4-1.2l10,12l18-8.8l-3.6-15.2C294.4,291.2,298.4,287.2,301.2,282.4z M242.4,286c-18.8-6.4-28.8-26.4-22.8-45.2 c6.4-18.8,26.8-29.2,45.6-22.8c18.8,6.4,28.8,26.4,22.8,45.2C281.6,282,261.2,292.4,242.4,286z'%3E%3C/path%3E%3Cpath style='fill:%23324A5E;' d='M380.4,304c-20.4,50-69.6,85.2-126.8,85.2c-18.8,0-36.8-4-53.6-10.8c-2.4,5.6-5.6,10.4-9.6,14.8 c19.2,8.8,40.8,13.6,63.2,13.6c65.6,0,122-41.2,144.4-99.2C392,307.2,386,306,380.4,304z M132,157.2c-20.4,26-32.8,59.2-32.8,94.8 c0,22.4,4.8,43.6,13.6,62.8c4.4-4,9.2-7.2,14.8-9.6c-6.8-16.4-10.8-34.4-10.8-53.2c0-30.4,10-58.8,27.2-81.6 C139.2,166.8,135.2,162.4,132,157.2z M253.6,97.6c-9.2,0-18.4,0.8-27.6,2.4c2.8,5.2,5.2,10.8,6.4,16.8c6.8-1.2,14-1.6,21.2-1.6 c57.2,0,106.4,35.2,126.8,85.2c5.6-2,11.2-3.2,17.2-3.2C375.6,138.8,319.6,97.6,253.6,97.6z'%3E%3C/path%3E%3Cg%3E%3Ccircle style='fill:%23FF7058;' cx='399.6' cy='252' r='28.4'%3E%3C/circle%3E%3Ccircle style='fill:%23FF7058;' cx='150' cy='356' r='28.4'%3E%3C/circle%3E%3Ccircle style='fill:%23FF7058;' cx='178.4' cy='127.2' r='28.4'%3E%3C/circle%3E%3C/g%3E%3C/g%3E%3C/svg%3E"
 XL='data:image/svg+xml,<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M12.5535 16.5061C12.4114 16.6615 12.2106 16.75 12 16.75C11.7894 16.75 11.5886 16.6615 11.4465 16.5061L7.44648 12.1311C7.16698 11.8254 7.18822 11.351 7.49392 11.0715C7.79963 10.792 8.27402 10.8132 8.55352 11.1189L11.25 14.0682V3C11.25 2.58579 11.5858 2.25 12 2.25C12.4142 2.25 12.75 2.58579 12.75 3V14.0682L15.4465 11.1189C15.726 10.8132 16.2004 10.792 16.5061 11.0715C16.8118 11.351 16.833 11.8254 16.5535 12.1311L12.5535 16.5061Z" fill="%23eee"></path><path d="M3.75 15C3.75 14.5858 3.41422 14.25 3 14.25C2.58579 14.25 2.25 14.5858 2.25 15V15.0549C2.24998 16.4225 2.24996 17.5248 2.36652 18.3918C2.48754 19.2919 2.74643 20.0497 3.34835 20.6516C3.95027 21.2536 4.70814 21.5125 5.60825 21.6335C6.47522 21.75 7.57754 21.75 8.94513 21.75H15.0549C16.4225 21.75 17.5248 21.75 18.3918 21.6335C19.2919 21.5125 20.0497 21.2536 20.6517 20.6516C21.2536 20.0497 21.5125 19.2919 21.6335 18.3918C21.75 17.5248 21.75 16.4225 21.75 15.0549V15C21.75 14.5858 21.4142 14.25 21 14.25C20.5858 14.25 20.25 14.5858 20.25 15C20.25 16.4354 20.2484 17.4365 20.1469 18.1919C20.0482 18.9257 19.8678 19.3142 19.591 19.591C19.3142 19.8678 18.9257 20.0482 18.1919 20.1469C17.4365 20.2484 16.4354 20.25 15 20.25H9C7.56459 20.25 6.56347 20.2484 5.80812 20.1469C5.07435 20.0482 4.68577 19.8678 4.40901 19.591C4.13225 19.3142 3.9518 18.9257 3.85315 18.1919C3.75159 17.4365 3.75 16.4354 3.75 15Z" fill="%23eee"></path></g></svg>'
 CSS="""
@@ -705,22 +722,10 @@ def ping_host(ip: str, timeout: float = 2.0) -> bool:
     Returns:
         True if host responds to ping, False otherwise
     """
+    timeoutms = str(int(timeout * 1000))
+    ping_cmd = shlex.split(PING.format(ip=ip, timeout=timeout, timeoutms=timeoutms))
     try:
-        # Using -c 1 for count=1, -W timeout for timeout in seconds
-        # Windows uses -n 1 for count=1, -w timeout in milliseconds
-        # macOS uses -c 1 for count=1, -t timeout in seconds
-        # SunOS uses host timeout
-        # These are standard Linux ping parameters
-        system = platform.system().lower()
-        if system == "windows":
-            command = ["ping", "-n", "1", "-w", str(int(timeout * 1000)), ip]
-        elif system == "darwin":  # macOS
-            command = ['ping', '-c', '1', '-t', str(int(timeout)), ip]
-        elif system == "sunos":  # SunOS
-            command = ['ping', ip, str(int(timeout))]
-        else:
-            command = ['ping', '-c', '1', '-W', str(int(timeout)), ip]
-        output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
+        output = subprocess.run(ping_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout + 1)
         return output.returncode == 0
     except Exception:
         return False
