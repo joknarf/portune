@@ -281,8 +281,8 @@ function initTableFilters(table) {
             // Add filter input
             const input = document.createElement('input');
             input.type = 'search';
-            input.className = 'column-filter';
-            input.placeholder = '\\uD83D\\uDD0E\\uFE0E'; 
+            input.className = `column-filter input-${index}`;
+            input.placeholder = '\\uD83D\\uDD0E\\uFE0E';
             input.addEventListener('input', () => applyFilters(table));
             header.appendChild(input);
         }
@@ -547,6 +547,7 @@ function exportToExcel(table, fileNamePrefix = 'export') {
 let commandsTable = document.querySelector('#commandTable');
 document.addEventListener('DOMContentLoaded', () => {
     if (commandsTable) initTableFilters(commandsTable);
+    document.querySelector('.input-4').value = '{FILTER}';
 });
 </script>
 """
@@ -1187,6 +1188,7 @@ def generate_html_report(
     stats: Dict[str, Any],
     input_file: str = '',
     desc_titles: List[str] = [],
+    filter: str = '',
 ) -> None:
     """Generate a complete HTML report of the port scan results.
 
@@ -1256,8 +1258,11 @@ def generate_html_report(
             ping_status = 'UP' if ping else 'N/A' if noping else 'DOWN'
             ping_class = 'green' if ping else 'blue' if noping else 'red'
             status_class = 'green' if status == 'CONNECTED' else 'blue' if status == 'REFUSED' else 'red'
+            row_class = ''
+            if filter and status != filter:
+                row_class = 'hidden'
             f.write(f'''
-                <tr>
+                <tr class="{row_class}">
                     <td>{escape(str(hostname))}</td>
                     <td>{escape(str(ip))}</td>
                     <td>{str(get_vlan_base(ip, stats['vlan_bits']))}</td>
@@ -1274,7 +1279,7 @@ def generate_html_report(
         f.write(generate_html_summary(stats, parallelism, timeout))
         
         # Add JavaScript for interactivity
-        f.write(f'</body>{JS}</html>\n')
+        f.write(f'</body>{JS.replace("{FILTER}", filter)}</html>\n')
 
 def print_statistics(stats, timeout, parallelism):
     def format_percent(value, total):
@@ -1449,6 +1454,9 @@ def main():
     parser.add_argument('-s', '--summary', action="store_true", help='Print scan summary information')
     parser.add_argument('-b', '--bits', type=int, default=16, help='VLAN bits for timeout summary (default: 16)')
     parser.add_argument('-d', '--desc_titles', type=str, nargs='*', help='List of custom description titles for hosts (optional)')
+    parser.add_argument('-f', '--filter', type=str, help='default status filter for html report (optional)',
+                        choices=['CONNECTED', 'REFUSED', 'TIMEOUT', 'UNREACHABLE', 'RESOLVE_FAIL'], default='')
+
     # Email related arguments
     email_group = parser.add_argument_group('Email Options')
     email_group.add_argument('--email-to', help='Comma-separated list of email recipients')
@@ -1516,6 +1524,7 @@ def main():
         stats,
         args.input_file,
         args.desc_titles,
+        args.filter,
     )
     
     # Print summary
