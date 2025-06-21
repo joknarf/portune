@@ -288,7 +288,7 @@ function initTableFilters(table) {
         }
     });
     // Initialize row count
-    updateRowCount(table, table.querySelectorAll('tbody tr').length);
+    updateRowCount(table, table.querySelectorAll('tbody tr:not(.hidden)').length);
 }
 
 function updateRowCount(table, count) {
