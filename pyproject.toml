@@ -12,13 +12,12 @@ dependencies = [
 ]
 dynamic=["version"]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT License"
 requires-python = ">= 3.9"
 keywords = ["port", "scanner", "html_report"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: System Administrators",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: POSIX",
   "Operating System :: Unix",
   "Operating System :: MacOS",
