@@ -24,6 +24,7 @@ import time
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
+import json
 from html import escape
 import smtplib
 from email.mime.text import MIMEText
@@ -619,7 +620,7 @@ class ProgressBar:
             sys.stderr.write('\n')
             sys.stderr.flush()
 
-def parse_input_file(filename: str) -> List[Tuple[str, List[int]]]:
+def parse_input_file(filename: str, info_command: Optional[str] = None) -> List[Tuple[str, List[int]]]:
     """Parse the input file containing host and port information.
 
     Reads a text file where each line contains a hostname and optionally a list of ports.
@@ -660,17 +661,29 @@ def parse_input_file(filename: str) -> List[Tuple[str, List[int]]]:
             fqdn = words[0].lower()
             ports = words[1] if len(words) > 1 else '22'
             port_list = [int(p) for p in ports.split(',')]
-            desc = ' '.join(words[2:]).strip() if len(words) > 2 else ''
+            desc = ' '.join(words[2:]).strip().split('|') if len(words) > 2 else []
             if fqdn in host_dict:
                 existing_ports, existing_desc = host_dict[fqdn]
                 host_dict[fqdn] = (list(set(existing_ports + port_list)), existing_desc or desc)
             else:
-                host_dict[fqdn] = (port_list, desc)            
+                host_dict[fqdn] = (port_list, desc)
+    desc_titles = []
+    if info_command: 
+        res = subprocess.run(info_command, shell=True, input='\n'.join(host_dict.keys())+'\n', text=True, capture_output=True)
+        lines = res.stdout.splitlines()
+        desc_titles = lines[0].strip().split('\t')[1:]  # Get the description titles from the first line
+        lines.pop(0)  # Remove the first line with titles
+        for line in lines:
+            info = line.strip().split('\t')
+            fqdn = info[0].lower()
+            info.pop(0)  # Remove the hostname from the info list
+            if fqdn in host_dict:
+                host_dict[fqdn] = (host_dict[fqdn][0], info)
     hosts = []
     for fqdn in  host_dict:
         ports, desc = host_dict[fqdn]
         hosts.append((fqdn, sorted(ports), desc))
-    return hosts
+    return (hosts, desc_titles)
 
 def ping_host(ip: str, timeout: float = 2.0) -> bool:
     """Test if a host responds to ICMP ping.
@@ -807,7 +820,7 @@ def ping_hosts(hosts: List[Tuple[str, List[int], str]],
 def check_port(hostname: str, 
              port: int, 
              host_info: Dict[str, Union[str, bool]],
-             desc: str,
+             desc: list,
              timeout: float = 2.0) -> Tuple[str, str, int, str, bool]:
     """Check if a specific TCP port is accessible on a host.
 
@@ -1236,7 +1249,7 @@ def generate_html_report(
         # Write detailed results table
         if not desc_titles:
             _, _, _, _, _, desc = results[0]
-            desc_titles = ["Description" for d in desc.split("|")]
+            desc_titles = ["Description" for d in desc]
         f.write(f'''
         <div class="table-container" id="result-container">
             <table id="commandTable">
@@ -1270,7 +1283,7 @@ def generate_html_report(
                     <td style="text-align: right;">{port}</td>
                     <td style="text-align: center;"><span class="{status_class} status">{escape(status)}</span></td>
                     <td style="text-align: center;"><span class="{ping_class} ping">{ping_status}</span></td>
-                    {"\n".join([f'<td class="desc">{escape(str(d))}</td>' for d in desc.split("|")])}
+                    {"\n".join([f'<td class="desc">{escape(str(d))}</td>' for d in desc])}
                 </tr>
             ''')
 
@@ -1457,6 +1470,7 @@ def main():
     parser.add_argument('-d', '--desc_titles', type=str, nargs='*', help='List of custom description titles for hosts (optional)')
     parser.add_argument('-f', '--filter', type=str, help='default status filter for html report (optional)',
                         choices=['CONNECTED', 'REFUSED', 'TIMEOUT', 'UNREACHABLE', 'RESOLVE_FAIL'], default='')
+    parser.add_argument('-i', '--info_command', type=str, help='Exernal command to get hosts information (optional)',)
 
     # Email related arguments
     email_group = parser.add_argument_group('Email Options')
@@ -1474,7 +1488,7 @@ def main():
     if not os.path.exists(args.input_file):
         print(f"Input file '{args.input_file}' does not exist.", file=sys.stderr)
         sys.exit(1)
-    hosts = parse_input_file(args.input_file)
+    (hosts, desc_titles) = parse_input_file(args.input_file, args.info_command)
     if not hosts:
         print(f"No valid hosts found in input file '{args.input_file}'.", file=sys.stderr)
         sys.exit(1)
@@ -1524,7 +1538,7 @@ def main():
         args.noping,
         stats,
         args.input_file,
-        args.desc_titles,
+        args.desc_titles or desc_titles or [],
         args.filter,
     )
     
