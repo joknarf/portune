@@ -453,7 +453,7 @@ function exportToExcel(table, fileNamePrefix = 'export') {
 
     // Get data rows with type information
     const rows = Array.from(table.querySelectorAll('tbody tr'))
-        .filter(row => row.style.display !== 'none')
+        .filter(row => ! row.classList.contains('hidden'))
         .map(row => 
             Array.from(row.cells)
                 .map(cell => {
