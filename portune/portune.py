@@ -24,7 +24,6 @@ import time
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
-import json
 from html import escape
 import smtplib
 from email.mime.text import MIMEText
@@ -611,10 +610,18 @@ class ProgressBar:
         percentage = f"{100 * self.current / self.total:.1f}%"
         elapsed_time = time.time() - self.start_time
         speed = self.current / elapsed_time if elapsed_time > 0 else 0
+
+
         # Create the progress message
         progress_msg = f'{self.prefix} |{bar}| {percentage} ({self.current}/{self.total}) [{speed:.1f} ports/s]'
         # Add padding to ensure old content is cleared
-        sys.stderr.write('\r' + progress_msg)
+        try:
+            col = os.get_terminal_size(2).columns
+        except OSError:
+            col = 80
+        padding = ' ' * (col - len(progress_msg) - 1)
+
+        sys.stderr.write('\r' + progress_msg[:col - 1] + padding)
         sys.stderr.flush()
         if self.current == self.total:
             sys.stderr.write('\n')
