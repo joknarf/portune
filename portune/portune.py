@@ -709,12 +709,15 @@ def ping_host(ip: str, timeout: float = 2.0) -> bool:
         # Using -c 1 for count=1, -W timeout for timeout in seconds
         # Windows uses -n 1 for count=1, -w timeout in milliseconds
         # macOS uses -c 1 for count=1, -t timeout in seconds
+        # SunOS uses host timeout
         # These are standard Linux ping parameters
         system = platform.system().lower()
         if system == "windows":
             command = ["ping", "-n", "1", "-w", str(int(timeout * 1000)), ip]
         elif system == "darwin":  # macOS
             command = ['ping', '-c', '1', '-t', str(int(timeout)), ip]
+        elif system == "sunos":  # SunOS
+            command = ['ping', ip, str(int(timeout))]
         else:
             command = ['ping', '-c', '1', '-W', str(int(timeout)), ip]
         output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
