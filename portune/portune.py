@@ -1279,7 +1279,8 @@ def generate_html_report(
                         <th>Port</th>
                         <th>Status</th>
                         <th>Ping</th>
-                        {"\n".join([f"<th>{d}</th>" for d in desc_titles])}
+                        {"""
+                         """.join([f"<th>{d}</th>" for d in desc_titles])}
                     </tr>
                 </thead>
                 <tbody>
@@ -1301,7 +1302,8 @@ def generate_html_report(
                     <td style="text-align: right;">{port}</td>
                     <td style="text-align: center;"><span class="{status_class} status">{escape(status)}</span></td>
                     <td style="text-align: center;"><span class="{ping_class} ping">{ping_status}</span></td>
-                    {"\n".join([f'<td class="desc">{escape(desc[i] if i < len(desc) else "")}</td>' for i in range(len(desc_titles))])}
+                    {"""
+                    """.join([f'<td class="desc">{escape(desc[i] if i < len(desc) else "")}</td>' for i in range(len(desc_titles))])}
                 </tr>
             ''')
 
