@@ -32,6 +32,9 @@ from email.mime.application import MIMEApplication
 from typing import List, Dict, Tuple, Any, Optional, Union
 
 # Constants and global variables
+
+# Use system ping command based on the OS
+# as raw socket ICMP ping requires privileges
 OS = platform.system().lower()
 if OS == "windows":
     PING = "ping -n 1 -w {timeoutms} {ip}"
@@ -40,9 +43,9 @@ elif OS == "darwin":  # macOS
 elif OS == "sunos":  # SunOS
     PING = "ping {ip} {timeout}"
 elif OS == "aix":  # IBM AIX
-    PING = "ping -c 1 -w  {timeout} {ip}"
-elif OS.startswith("hp-ux"):  # HP-UX
-    PING = "ping -n 1 -w {timeout} {ip}"
+    PING = "ping -c 1 -w {timeout} {ip}"
+elif OS.startswith("hp-ux"):  # HP-UX 11.11+
+    PING = "ping -n 1 -m {timeout} {ip}"
 else:
     PING = "ping -c 1 -W {timeout} {ip}"
 
