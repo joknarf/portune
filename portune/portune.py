@@ -708,7 +708,7 @@ def parse_input_file(filename: str, info_command: Optional[str] = None) -> List[
         hosts.append((fqdn, sorted(ports), desc))
     return (hosts, desc_titles)
 
-def ping_host(ip: str, timeout: float = 2.0) -> bool:
+def ping_host(ip: str, timeout: int = 2) -> bool:
     """Test if a host responds to ICMP ping.
 
     Uses the system ping command to check host availability. The command is
@@ -729,7 +729,7 @@ def ping_host(ip: str, timeout: float = 2.0) -> bool:
     except Exception:
         return False
 
-def resolve_and_ping_host(hostname: str, timeout: float = 2.0, noping: bool = False) -> Tuple[str, Dict[str, Union[str, bool]]]:
+def resolve_and_ping_host(hostname: str, timeout: int = 2, noping: bool = False) -> Tuple[str, Dict[str, Union[str, bool]]]:
     """Resolve a hostname to IP and optionally check if it responds to ping.
 
     Performs DNS resolution and ping check in a single function. For IP addresses,
@@ -776,7 +776,7 @@ def resolve_and_ping_host(hostname: str, timeout: float = 2.0, noping: bool = Fa
         return hostname, {'ip': 'N/A', 'ping': False}
 
 def ping_hosts(hosts: List[Tuple[str, List[int], str]], 
-             timeout: float = 2.0, 
+             timeout: int = 2, 
              parallelism: int = 10, 
              noping: bool = False) -> Dict[str, Dict[str, Union[str, bool]]]:
     """Process DNS resolution and ping checks for multiple hosts in parallel.
@@ -839,7 +839,7 @@ def check_port(hostname: str,
              port: int, 
              host_info: Dict[str, Union[str, bool]],
              desc: list,
-             timeout: float = 2.0) -> Tuple[str, str, int, str, bool]:
+             timeout: int = 2) -> Tuple[str, str, int, str, bool]:
     """Check if a specific TCP port is accessible on a host.
 
     Attempts to establish a TCP connection to the specified port. Uses pre-resolved
@@ -1482,7 +1482,7 @@ def format_table_output(
 def main():
     parser = argparse.ArgumentParser(description='Port accessibility report utility')
     parser.add_argument('-p', '--parallelism', type=int, default=50, help='Number of parallel threads (default: 50)')
-    parser.add_argument('-t', '--timeout', type=float, default=2.0, help='Timeout in seconds for port and ping checks (default: 2.0)')
+    parser.add_argument('-t', '--timeout', type=float, default=2, help='Timeout in seconds for port and ping checks (default: 2)')
     parser.add_argument('-o', '--output', default=f'report_{HOSTNAME}.{time.strftime("%Y%m%d_%H%M%S")}.html', help='Output HTML report file')
     parser.add_argument('-n', '--noping', action="store_true", help='No ping check')
     parser.add_argument('-s', '--summary', action="store_true", help='Print scan summary information')
