@@ -729,6 +729,24 @@ def ping_host(ip: str, timeout: int = 2) -> bool:
     except Exception:
         return False
 
+def is_ip(hostname: str) -> bool:
+    """Check if a given hostname is an IP address.
+
+    Uses inet_aton to determine if the input string is a valid
+    IPv4 address.
+
+    Args:
+        hostname: The hostname or IP address to check
+
+    Returns:
+        True if the hostname is an IP address, False otherwise
+    """
+    try:
+        socket.inet_aton(hostname)
+        return True
+    except socket.error:
+        return False
+
 def resolve_and_ping_host(hostname: str, timeout: int = 2, noping: bool = False) -> Tuple[str, Dict[str, Union[str, bool]]]:
     """Resolve a hostname to IP and optionally check if it responds to ping.
 
@@ -749,25 +767,17 @@ def resolve_and_ping_host(hostname: str, timeout: int = 2, noping: bool = False)
                 - 'hostname': Original resolved hostname (only if different from input)
     """
     try:
-        # Check if hostname is already an IP address
-        try:
-            # Try to create an IP address object to validate format
-            socket.inet_aton(hostname)
-            is_ip = True
-        except socket.error:
-            is_ip = False
-
         # If it's an IP, try to get hostname from reverse DNS
-        if is_ip:
+        if is_ip(hostname):
             try:
-                resolved_hosts = socket.gethostbyaddr(hostname)
+                ip = hostname
+                resolved_hosts = socket.gethostbyaddr(ip)
                 if resolved_hosts and resolved_hosts[0]:
                     hostname = resolved_hosts[0]  # Use the resolved hostname
             except (socket.herror, socket.gaierror):
                 pass  # Keep the IP as hostname if reverse lookup fails
-
-        # Now resolve the hostname (or IP) to get its IP
-        ip = socket.gethostbyname(hostname)
+        else:
+            ip = socket.gethostbyname(hostname)
         if noping:
             return hostname, {'ip': ip, 'ping': False}
         ping_status = ping_host(ip, timeout)
@@ -1101,12 +1111,10 @@ def compute_stats(
     })
     
     for hostname, ip, port, status, _, _ in results:
-        # For IP addresses, use VLAN/16 as domain
-        try:
-            socket.inet_aton(hostname)
-            # It's a valid IP address, use VLAN/16
+        if is_ip(hostname):
+            # For IP addresses, use VLAN/16 as domain
             domain = '.'.join(hostname.split('.')[:2]) + '.0.0'
-        except socket.error:
+        else:
             # Not an IP address, extract domain normally
             parts = hostname.split('.')
             if len(parts) > 1:
@@ -1410,6 +1418,7 @@ def print_statistics(stats, timeout, parallelism):
             first_row = False
         if not first_row:  # Only print separator between domains if domain had data
             print(separator, file=sys.stderr)
+
 def format_table_output(
     results: List[Tuple[str, str, int, str, bool]], 
     noping: bool
