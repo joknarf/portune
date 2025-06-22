@@ -3,6 +3,7 @@
 [![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](https://shields.io/)
 [![](https://pepy.tech/badge/portune)](https://pepy.tech/project/portune)
 [![Python versions](https://img.shields.io/badge/python-3.9+-blue.svg)](https://shields.io/)
+[![bash](https://img.shields.io/badge/OS-Windows%20|Linux%20|%20macOS%20|%20SunOS%20|%20AIX%20|%20HP_UX%20...-blue.svg)]()
 
 # portune
 
