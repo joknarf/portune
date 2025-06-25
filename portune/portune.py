@@ -821,20 +821,12 @@ def ping_hosts(hosts: List[Tuple[str, List[int], str]],
     
     # Use a lock for thread-safe progress updates
     lock = threading.Lock()
-    
-    def _update_progress(_):
-        with lock:
-            progress_bar.update(1)
-    
+        
     with ThreadPoolExecutor(max_workers=parallelism) as executor:
         future_to_host = {
             executor.submit(resolve_and_ping_host, hostname, timeout, noping): hostname
             for hostname, _, _ in hosts
         }
-        
-        # Add callback to update progress bar when each future completes
-        for future in future_to_host:
-            future.add_done_callback(_update_progress)
         
         for future in as_completed(future_to_host):
             orig_hostname = future_to_host[future]
@@ -844,6 +836,9 @@ def ping_hosts(hosts: List[Tuple[str, List[int], str]],
             if resolved_hostname != orig_hostname:
                 # Keep resolved hostname in the info dict
                 results[orig_hostname]['hostname'] = resolved_hostname
+            with lock:
+                # Update progress bar in a thread-safe manner
+                progress_bar.update(1)
     
     print(file=sys.stderr)  # New line after progress bar
     return results
