@@ -7,7 +7,7 @@
 
 # portune
 
-Multitreaded port scanner
+Multithreaded port scanner
 
 # features
 
