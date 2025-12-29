@@ -1,4 +1,4 @@
-name: Build binary (manylinux/macos)
+name: Build and Release Packages
 
 on:
   release:
@@ -231,7 +231,7 @@ jobs:
 
       - name: Set environment variables
         run: |
-          OUT=${TOOL}-macos-amd64
+          OUT=${TOOL}-darwin-amd64
           echo "OUT=$OUT" >>$GITHUB_ENV
           echo "TOOL_PATH=dist/$OUT" >>$GITHUB_ENV
 
@@ -251,10 +251,45 @@ jobs:
           echo "__version__ = '$VERSION'" >$VERSION_PY
           pyinstaller --onefile --add-data="/usr/share/terminfo:terminfo" --name=$OUT $TOOL_PY
 
+      - name: Build TAR
+        run: |
+          fpm $FPM_BASE -n $OUT -t tar --prefix=$TOOL-$VERSION --description="$DESC" dist/$OUT=/bin/$TOOL && gzip *.tar
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v3
+        with:
+          repository: joknarf/homebrew-tools
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula
+        run: |
+          URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/$OUT.tar.gz"
+          SHA256=$(shasum -a 256 $OUT.tar.gz | awk '{print $1}')
+          FORMULA_FILE=homebrew-tap/Formula/$TOOL.rb
+          sed -i "s|AMD64 =.*|AMD64 = { url:  \"${URL}\", sha256: \"${SHA256}\" }|" $FORMULA_FILE
+          sed -i "s|version \".*\"|version \"${VERSION}\"|" $FORMULA_FILE
+
+      - name: Commit & Push
+        run: |
+          cd homebrew-tap
+          git add Formula/$TOOL.rb
+          git commit -m "Update $TOOL formula to $VERSION" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/${{ env.OUT }}
+          files: |
+            *.tar.gz
+
 
   build-macos-arm64:
     runs-on: macos-14
@@ -265,7 +300,7 @@ jobs:
 
       - name: Set environment variables
         run: |
-          OUT=${TOOL}-macos-arm64
+          OUT=${TOOL}-darwin-arm64
           echo "OUT=$OUT" >>$GITHUB_ENV
           echo "TOOL_PATH=dist/$OUT" >>$GITHUB_ENV
 
