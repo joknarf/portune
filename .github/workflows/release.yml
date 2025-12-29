@@ -249,8 +249,10 @@ jobs:
           pip install wheel
           pip install pyinstaller $TOOL
           echo "__version__ = '$VERSION'" >$VERSION_PY
-          pyinstaller -D --name=$TOOL-$VERSION $TOOL_PY
-          tar -C dist -cf $OUT.tar $TOOL-$VERSION
+          pyinstaller -D --name=$TOOL $TOOL_PY
+          cd dist
+          mv $TOOL $TOOL-$VERSION
+          tar -cf $OUT.tar $TOOL-$VERSION
           gzip $OUT.tar
 
       - name: Set up Git
@@ -316,8 +318,10 @@ jobs:
           pip install wheel
           pip install pyinstaller $TOOL
           echo "__version__ = '$VERSION'" >$VERSION_PY
-          pyinstaller -D --name=$TOOL-$VERSION $TOOL_PY
-          tar -C dist -cf $OUT.tar $TOOL-$VERSION
+          pyinstaller -D --name=$TOOL $TOOL_PY
+          cd dist
+          mv $TOOL $TOOL-$VERSION
+          tar -cf $OUT.tar $TOOL-$VERSION
           gzip $OUT.tar
 
       - name: Set up Git
