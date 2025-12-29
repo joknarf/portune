@@ -249,12 +249,9 @@ jobs:
           pip install wheel
           pip install pyinstaller $TOOL
           echo "__version__ = '$VERSION'" >$VERSION_PY
-          pyinstaller --onefile --add-data="/usr/share/terminfo:terminfo" --name=$OUT $TOOL_PY
-
-      - name: Build TAR
-        run: |
-          gem install --no-document fpm
-          fpm $FPM_BASE -n $OUT -t tar --prefix=$TOOL-$VERSION --description="$DESC" dist/$OUT=/bin/$TOOL && gzip *.tar
+          pyinstaller -D --name=$TOOL-$VERSION $TOOL_PY
+          tar -C dist -cf $OUT.tar $TOOL-$VERSION
+          gzip $OUT.tar
 
       - name: Set up Git
         run: |
@@ -319,12 +316,9 @@ jobs:
           pip install wheel
           pip install pyinstaller $TOOL
           echo "__version__ = '$VERSION'" >$VERSION_PY
-          pyinstaller --onefile --add-data="/usr/share/terminfo:terminfo" --name=$OUT $TOOL_PY
-
-      - name: Build TAR
-        run: |
-          gem install --no-document fpm
-          fpm $FPM_BASE -n $OUT -t tar --prefix=$TOOL-$VERSION --description="$DESC" dist/$OUT=/bin/$TOOL && gzip *.tar
+          pyinstaller -D --name=$TOOL-$VERSION $TOOL_PY
+          tar -C dist -cf $OUT.tar $TOOL-$VERSION
+          gzip $OUT.tar
 
       - name: Set up Git
         run: |
