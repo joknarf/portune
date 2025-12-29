@@ -72,7 +72,7 @@ jobs:
       - name: Build DEB
         run: |
           BUILD_EPOCH=$(date +%s)
-          fpm $FPM_BASE -t deb --prefix=/usr --description="$DESC" -deb-field "Build-Date:$BUILD_EPOCH" $TOOL_PATH=/bin/$TOOL
+          fpm $FPM_BASE -t deb --prefix=/usr --description="$DESC" --deb-field "Build-Date:$BUILD_EPOCH" $TOOL_PATH=/bin/$TOOL
           ln -s ${TOOL}_${VERSION}_amd64.deb ${TOOL}_amd64.deb
 
       - name: Checkout deb
