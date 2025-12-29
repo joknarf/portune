@@ -53,15 +53,17 @@ jobs:
       - name: Build with manylinux (x86_64)
         run: |
           set -e
-          IMAGE=quay.io/pypa/manylinux_2_28_x86_64
+          IMAGE=quay.io/pypa/manylinux2014_x86_64
           docker run --rm \
             -v "$PWD:/src" \
             $IMAGE \
             bash -c "
               set -e
-              yum install -y python39
               cd /src
-              /usr/bin/python3.9 -m venv .venv
+              curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
+              mv bin/micromamba /usr/local/bin/
+              micromamba create -y -c conda-forge python=3.9 -p /opt/python39
+              /opt/python39/bin/python -m venv .venv
               source .venv/bin/activate
               pip install wheel
               pip install pyinstaller $TOOL
@@ -149,13 +151,16 @@ jobs:
       - name: Build with manylinux (aarch64)
         run: |
           set -e
-          IMAGE=quay.io/pypa/manylinux_2_28_aarch64
+          IMAGE=quay.io/pypa/manylinux2014_aarch64
           docker run --rm \
             -v "$PWD:/src" \
             $IMAGE \
             bash -c "
               set -e
-              yum install -y python39
+              curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
+              mv bin/micromamba /usr/local/bin/
+              micromamba create -y -c conda-forge python=3.9 -p /opt/python39
+              /opt/python39/bin/python -m venv .venv
               cd /src
               /usr/bin/python3.9 -m venv .venv
               source .venv/bin/activate
