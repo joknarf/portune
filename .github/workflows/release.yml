@@ -273,8 +273,8 @@ jobs:
           URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/$OUT.tar.gz"
           SHA256=$(shasum -a 256 $OUT.tar.gz | awk '{print $1}')
           FORMULA_FILE=homebrew-tap/Formula/$TOOL.rb
-          sed -i "s|AMD64 =.*|AMD64 = { url:  \"${URL}\", sha256: \"${SHA256}\" }|" $FORMULA_FILE
-          sed -i "s|version \".*\"|version \"${VERSION}\"|" $FORMULA_FILE
+          sed -i -e "s|AMD64 =.*|AMD64 = { url: \"${URL}\", sha256: \"${SHA256}\" }|" $FORMULA_FILE
+          sed -i -e "s|version \".*\"|version \"${VERSION}\"|" $FORMULA_FILE
 
       - name: Commit & Push
         run: |
