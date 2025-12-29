@@ -288,7 +288,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            *.tar.gz
+            dist/*.tar.gz
 
 
   build-macos-arm64:
@@ -357,7 +357,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            *.tar.gz
+            dist/*.tar.gz
 
   build-windows:
     runs-on: windows-latest
