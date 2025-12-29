@@ -84,10 +84,10 @@ jobs:
 
       - name: update deb repo
         run: |
-          cp $TOOL-amd64.deb deb/pool/main
+          cp ${TOOL}_amd64.deb deb/pool/main
           cd deb
-          git add pool/main/$TOOL-amd64.deb
-          git commit -m "Update $TOOL-amd64.deb to $VERSION" || echo "No changes to commit"
+          git add pool/main/${TOOL}_amd64.deb
+          git commit -m "Update ${TOOL}_amd64.deb to $VERSION" || echo "No changes to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.JOKNARF_YUM_TOKEN }}
@@ -180,10 +180,10 @@ jobs:
 
       - name: update deb repo
         run: |
-          cp $TOOL-arm64.deb deb/pool/main
+          cp ${TOOL}_arm64.deb deb/pool/main
           cd deb
-          git add pool/main/$TOOL-arm64.deb
-          git commit -m "Update $TOOL-arm64.deb to $VERSION" || echo "No changes to commit"
+          git add pool/main/${TOOL}_arm64.deb
+          git commit -m "Update ${TOOL}_arm64.deb to $VERSION" || echo "No changes to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.JOKNARF_YUM_TOKEN }}
