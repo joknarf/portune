@@ -321,6 +321,40 @@ jobs:
           echo "__version__ = '$VERSION'" >$VERSION_PY
           pyinstaller --onefile --add-data="/usr/share/terminfo:terminfo" --name=$OUT $TOOL_PY
 
+      - name: Build TAR
+        run: |
+          gem install --no-document fpm
+          fpm $FPM_BASE -n $OUT -t tar --prefix=$TOOL-$VERSION --description="$DESC" dist/$OUT=/bin/$TOOL && gzip *.tar
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v3
+        with:
+          repository: joknarf/homebrew-tools
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula
+        run: |
+          URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/$OUT.tar.gz"
+          SHA256=$(shasum -a 256 $OUT.tar.gz | awk '{print $1}')
+          FORMULA_FILE=homebrew-tap/Formula/$TOOL.rb
+          sed -i -e "s|ARM64 =.*|ARM64 = { url: \"${URL}\", sha256: \"${SHA256}\" }|" $FORMULA_FILE
+          sed -i -e "s|version \".*\"|version \"${VERSION}\"|" $FORMULA_FILE
+
+      - name: Commit & Push
+        run: |
+          cd homebrew-tap
+          git add Formula/$TOOL.rb
+          git commit -m "Update $TOOL formula to $VERSION" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
