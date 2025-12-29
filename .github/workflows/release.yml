@@ -253,6 +253,7 @@ jobs:
 
       - name: Build TAR
         run: |
+          gem install --no-document fpm
           fpm $FPM_BASE -n $OUT -t tar --prefix=$TOOL-$VERSION --description="$DESC" dist/$OUT=/bin/$TOOL && gzip *.tar
 
       - name: Set up Git
