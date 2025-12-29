@@ -157,7 +157,7 @@ jobs:
             $IMAGE \
             bash -c "
               set -e
-              curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
+              curl -Ls https://micro.mamba.pm/api/micromamba/linux-aarch64/latest| tar -xvj bin/micromamba
               mv bin/micromamba /usr/local/bin/
               micromamba create -y -c conda-forge python=3.9 -p /opt/python39
               /opt/python39/bin/python -m venv .venv
