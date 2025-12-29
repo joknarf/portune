@@ -157,12 +157,11 @@ jobs:
             $IMAGE \
             bash -c "
               set -e
+              cd /src
               curl -Ls https://micro.mamba.pm/api/micromamba/linux-aarch64/latest| tar -xvj bin/micromamba
               mv bin/micromamba /usr/local/bin/
               micromamba create -y -c conda-forge python=3.9 -p /opt/python39
               /opt/python39/bin/python -m venv .venv
-              cd /src
-              /usr/bin/python3.9 -m venv .venv
               source .venv/bin/activate
               pip install wheel
               pip install pyinstaller $TOOL
