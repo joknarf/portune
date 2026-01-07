@@ -1,7 +1,6 @@
 [![Joknarf Tools](https://img.shields.io/badge/Joknarf%20Tools-Visit-darkgreen?logo=github)](https://joknarf.github.io/joknarf-tools)
 [![Pypi version](https://img.shields.io/pypi/v/portune.svg)](https://pypi.org/project/portune/)
-![example](https://github.com/joknarf/portune/actions/workflows/release.yml/badge.svg)
-[![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](https://shields.io/)
+[![Build and Release Packages](https://github.com/joknarf/portune/actions/workflows/release.yml/badge.svg)](https://github.com/joknarf/portune/actions/workflows/release.yml)[![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](https://shields.io/)
 [![](https://pepy.tech/badge/portune)](https://pepy.tech/project/portune)
 [![Python versions](https://img.shields.io/badge/python-3.9+-blue.svg)](https://shields.io/)
 [![bash](https://img.shields.io/badge/OS-%20Windows%20|%20Linux%20|%20macOS%20|%20SunOS%20|%20AIX%20|%20HP_UX%20...-blue.svg)]()
