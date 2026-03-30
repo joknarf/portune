@@ -1060,20 +1060,24 @@ def compute_stats(
             'unreachable': sum(1 for r in results if r[3] == 'UNREACHABLE'),
             'resolve_fail': sum(1 for r in results if r[3] == 'RESOLVE_FAIL')
         },
-        'vlan_timeouts': defaultdict(lambda: {'timeouts': 0, 'total': 0}),
+        'vlan_timeouts': defaultdict(lambda: {'port_data': {}}),
         'vlan_bits': bits,
     }
 
 
 
-    # Collect VLAN statistics for timeouts
+    # Collect VLAN statistics for timeouts - track both total and timeouts per port
     for hostname, ip, port, status, _, _ in results:
         if ip != 'N/A':
             try:
                 vlan = get_vlan_base(ip, bits)
-                stats['vlan_timeouts'][vlan]['total'] += 1
+                # Initialize port entry if needed
+                if port not in stats['vlan_timeouts'][vlan]['port_data']:
+                    stats['vlan_timeouts'][vlan]['port_data'][port] = {'total': 0, 'timeouts': 0}
+                # Track total and timeouts
+                stats['vlan_timeouts'][vlan]['port_data'][port]['total'] += 1
                 if status == 'TIMEOUT':
-                    stats['vlan_timeouts'][vlan]['timeouts'] += 1
+                    stats['vlan_timeouts'][vlan]['port_data'][port]['timeouts'] += 1
             except:
                 pass
 
@@ -1716,24 +1720,31 @@ def generate_html_summary(
         html.append(f'''
         <h3>VLAN/{stats['vlan_bits']} with Timeout</h3>
         <div class="table-container" style="display: inline-block;">
-        <table><tr><th>VLAN/{stats['vlan_bits']}</th><th style="text-align: right;">Timeouts</th>
-        <th style="text-align: right;">Total</th><th style="text-align: right;">%</th></tr>''')
+        <table><tr><th>VLAN/{stats['vlan_bits']}</th><th style="text-align: right;">Port</th>
+        <th style="text-align: right;">Timeouts</th><th style="text-align: right;">Total</th><th style="text-align: right;">%</th></tr>''')
         
-        # Sort VLANs by timeout percentage (descending)
+        # Sort VLANs by highest timeout percentage (descending)
         sorted_vlans = sorted(
             stats['vlan_timeouts'].items(),
-            key=lambda x: (x[1]['timeouts'] / x[1]['total'] if x[1]['total'] > 0 else 0),
+            key=lambda x: max([p['timeouts']/p['total'] for p in x[1]['port_data'].values() if p['total'] > 0], default=0),
             reverse=True
         )
         
         for vlan, data in sorted_vlans:
-            if data['timeouts']:
-                value_str, pct_str = format_percent(data['timeouts'], data['total'])
-                tm_class = 'red' if data['timeouts'] == data['total'] else 'green' if data['timeouts'] == 0 else 'blue'
-                html.append(f'''<tr>
-                    <td>{vlan}</td>
-                    <td style="text-align: right;">{data['timeouts']}</td>
-                    <td style="text-align: right;">{data['total']}</td>
+            # Filter ports that have at least one timeout
+            ports_with_timeouts = {p: d for p, d in data['port_data'].items() if d['timeouts'] > 0}
+
+            if ports_with_timeouts:
+                # Sort ports by timeout count (descending)
+                sorted_ports = sorted(ports_with_timeouts.items(), key=lambda x: x[1]['timeouts'], reverse=True)
+                for idx, (port, port_info) in enumerate(sorted_ports):
+                    value_str, pct_str = format_percent(port_info['timeouts'], port_info['total'])
+                    tm_class = 'red' if port_info['timeouts'] == port_info['total'] else 'blue'
+                    html.append(f'''<tr>
+                    <td>{'<strong>' + vlan + '</strong>' if idx == 0 else ''}</td>
+                    <td style="text-align: right;">{port}</td>
+                    <td style="text-align: right;">{port_info['timeouts']}</td>
+                    <td style="text-align: right;">{port_info['total']}</td>
                     <td style="text-align: center;"><span class="{tm_class} pct">{pct_str}</span></td>
                 </tr>''')
         html.append('</table></div>')
