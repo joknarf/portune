@@ -1060,14 +1060,14 @@ def compute_stats(
             'unreachable': sum(1 for r in results if r[3] == 'UNREACHABLE'),
             'resolve_fail': sum(1 for r in results if r[3] == 'RESOLVE_FAIL')
         },
-        'vlan_timeouts': defaultdict(lambda: {'port_data': {}}),
+        'vlan_timeouts': defaultdict(lambda: {'port_data': {}, 'ping_down_hosts': set(), 'total_hosts': set()}),
         'vlan_bits': bits,
     }
 
 
 
     # Collect VLAN statistics for timeouts - track both total and timeouts per port
-    for hostname, ip, port, status, _, _ in results:
+    for hostname, ip, port, status, ping, _ in results:
         if ip != 'N/A':
             try:
                 vlan = get_vlan_base(ip, bits)
@@ -1078,6 +1078,13 @@ def compute_stats(
                 stats['vlan_timeouts'][vlan]['port_data'][port]['total'] += 1
                 if status == 'TIMEOUT':
                     stats['vlan_timeouts'][vlan]['port_data'][port]['timeouts'] += 1
+                
+                # Track ping down hosts
+                if not ping:
+                    stats['vlan_timeouts'][vlan]['ping_down_hosts'].add(hostname)
+                
+                # Track unique hosts per VLAN
+                stats['vlan_timeouts'][vlan]['total_hosts'].add(hostname)
             except:
                 pass
 
@@ -1723,16 +1730,22 @@ def generate_html_summary(
         <table><tr><th>VLAN/{stats['vlan_bits']}</th><th style="text-align: right;">Port</th>
         <th style="text-align: right;">Timeouts</th><th style="text-align: right;">Total</th><th style="text-align: right;">%</th></tr>''')
         
-        # Sort VLANs by highest timeout percentage (descending)
+        # Sort VLANs by total timeout count (descending)
         sorted_vlans = sorted(
             stats['vlan_timeouts'].items(),
-            key=lambda x: max([p['timeouts']/p['total'] for p in x[1]['port_data'].values() if p['total'] > 0], default=0),
+            key=lambda x: sum(p['timeouts'] for p in x[1]['port_data'].values()) + len(x[1]['ping_down_hosts']),
             reverse=True
         )
         
         for vlan, data in sorted_vlans:
-            # Filter ports that have at least one timeout
+            # Get all ports with timeouts and ping down hosts
             ports_with_timeouts = {p: d for p, d in data['port_data'].items() if d['timeouts'] > 0}
+            
+            # Add ping as a special "port" if there are ping down hosts
+            if data['ping_down_hosts']:
+                ping_total = len(data['total_hosts'])
+                ping_timeouts = len(data['ping_down_hosts'])
+                ports_with_timeouts['ICMP'] = {'total': ping_total, 'timeouts': ping_timeouts}
 
             if ports_with_timeouts:
                 # Sort ports by timeout count (descending)
